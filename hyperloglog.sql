@@ -1,15 +1,19 @@
+--Calculate the cardinality estimate
 select dimension,0.7213/(1 + 1.079/4096) * pow(4096,2) * 1/sum(pow(2,-1*first_non_zero)) cardinality_estimate
 from (
+  --Find the maximum position of the first non-zero per register per dimension
   select 
     register_number, 
     dimension,
     max(first_non_zero) as first_non_zero
   from (
+    --Determine the position of the first non-zero bit
     select
       register_number,
       dimension,
       length(nvl(regexp_substr(sha1_binary,'^0*'),''))+1 as first_non_zero
     from (
+      --Hackily convert the hash to binary
       select
         element,
         dimension,
@@ -29,6 +33,7 @@ from (
         ((sha1>>48)%2)::varchar+((sha1>>49)%2)::varchar+((sha1>>50)%2)::varchar+((sha1>>51)%2)::varchar+
         ((sha1>>52)%2)::varchar+((sha1>>53)%2)::varchar+((sha1>>54)%2)::varchar+((sha1>>55)%2)::varchar as sha1_binary
       from (
+        --Hash the elements and randomly assign them to 4096 registers
         select
           element,
           dimension,
@@ -36,6 +41,7 @@ from (
           strtol(left(func_sha1(element),3),16) register_number,
           strtol(right(func_sha1(element),14),16) as sha1
         from (
+          --First select the elements and dimensions for the distinct count
           select date(created_at) as dimension, product_id as element
           from sales
         )
